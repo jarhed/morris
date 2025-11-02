@@ -43,7 +43,7 @@
     </style>
 </head>
 <body>
-    <div id="instructions">Move your mouse to journey into the image</div>
+    <div id="instructions">Move mouse to look around • Scroll to zoom</div>
 
     <script type="importmap">
         {
@@ -122,64 +122,81 @@
             camera.lookAt(0, 0, 0);
         });
 
-        // Mouse tracking
-        let totalMouseMovement = 0;
-        let lastMouseX = window.innerWidth / 2;
-        let lastMouseY = window.innerHeight / 2;
-        let targetZoom = 0;
-        const maxZoom = 1; // 0 to 1, where 1 is fully zoomed in
+        // Mouse tracking - orbit around figure with scroll to zoom
+        let mouseX = 0.5;
+        let mouseY = 0.5;
+        let targetDistance = 15; // Start far away
+        let hasInteracted = false;
 
         document.addEventListener('mousemove', (event) => {
-            const deltaX = event.clientX - lastMouseX;
-            const deltaY = event.clientY - lastMouseY;
-            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            hasInteracted = true;
 
-            totalMouseMovement += distance;
-            lastMouseX = event.clientX;
-            lastMouseY = event.clientY;
+            // Normalize mouse position to 0-1 range
+            mouseX = event.clientX / window.innerWidth;
+            mouseY = event.clientY / window.innerHeight;
 
-            // Map total mouse movement to zoom (0 to 1)
-            // Adjust the divisor to control how much mouse movement is needed
-            targetZoom = Math.min(totalMouseMovement / 3000, maxZoom);
-
-            // Hide instructions after some movement
-            if (totalMouseMovement > 100) {
+            // Hide instructions after first interaction
+            if (hasInteracted) {
                 document.getElementById('instructions').classList.add('hidden');
             }
         });
+
+        // Scroll wheel zoom
+        document.addEventListener('wheel', (event) => {
+            event.preventDefault();
+            hasInteracted = true;
+
+            // Adjust target distance based on scroll direction
+            const zoomSpeed = 0.5;
+            targetDistance += event.deltaY * 0.01 * zoomSpeed;
+
+            // Clamp distance between 1 and 20
+            targetDistance = Math.max(1, Math.min(20, targetDistance));
+
+            // Hide instructions
+            if (hasInteracted) {
+                document.getElementById('instructions').classList.add('hidden');
+            }
+        }, { passive: false });
+
+        // Camera orbit parameters
+        let currentDistance = 15;
+        let currentTheta = 0;
+        let currentPhi = Math.PI / 2;
+
+        // Center point to orbit around (the figure's position)
+        const orbitCenter = new THREE.Vector3(0, 0, 0);
 
         // Animation
         function animate() {
             requestAnimationFrame(animate);
 
             if (imagePlane) {
-                // Smooth interpolation of zoom
-                const currentZoom = camera.position.z;
+                // Smoothly interpolate to target distance
+                currentDistance += (targetDistance - currentDistance) * 0.08;
 
-                // Calculate target camera position
-                // Start at z=15 (far), end at z=3 (close enough to see 3D depth)
-                const startZ = 15;
-                const endZ = 3;
-                const targetZ = startZ + (endZ - startZ) * targetZoom;
+                // Orbital angles based on mouse position
+                // Mouse X controls horizontal rotation (theta): -PI to +PI
+                const targetTheta = (mouseX - 0.5) * Math.PI * 2;
+                currentTheta += (targetTheta - currentTheta) * 0.08;
 
-                // Move camera towards target
-                camera.position.z += (targetZ - currentZoom) * 0.05;
+                // Mouse Y controls vertical angle (phi): PI/4 to 3*PI/4
+                // This keeps camera from going too high or too low
+                const targetPhi = Math.PI / 4 + mouseY * (Math.PI / 2);
+                currentPhi += (targetPhi - currentPhi) * 0.08;
 
-                // As we zoom in, move camera down to focus on the feet
-                // The feet are at the bottom of the image
-                const startY = 0;
-                const endY = -4; // Negative Y to focus on bottom of image
-                const targetY = startY + (endY - startY) * targetZoom;
+                // Convert spherical coordinates to Cartesian
+                const targetX = orbitCenter.x + currentDistance * Math.sin(currentPhi) * Math.cos(currentTheta);
+                const targetY = orbitCenter.y + currentDistance * Math.cos(currentPhi);
+                const targetZ = orbitCenter.z + currentDistance * Math.sin(currentPhi) * Math.sin(currentTheta);
 
-                camera.position.y += (targetY - camera.position.y) * 0.05;
+                // Update camera position
+                camera.position.x = targetX;
+                camera.position.y = targetY;
+                camera.position.z = targetZ;
 
-                // Add subtle horizontal rotation to see the 3D depth effect
-                const startX = 0;
-                const endX = 1; // Slight offset to view from angle
-                const targetX = startX + (endX - startX) * targetZoom;
-                camera.position.x += (targetX - camera.position.x) * 0.05;
-
-                camera.lookAt(0, targetY, 0);
+                // Always look at the center (the figure)
+                camera.lookAt(orbitCenter);
             }
 
             renderer.render(scene, camera);

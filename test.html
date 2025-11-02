@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test - Simple Image Load</title>
+    <style>
+        body { margin: 0; background: #222; color: white; font-family: Arial; }
+        img { max-width: 100%; display: block; margin: 20px auto; }
+        .status { padding: 20px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="status">Testing image loading...</div>
+    <img src="image.jpeg" alt="Main Image" onload="console.log('Color image loaded')" onerror="console.error('Color image failed')">
+    <img src="depth.png" alt="Depth Map" onload="console.log('Depth image loaded')" onerror="console.error('Depth image failed')">
+
+    <script type="module">
+        console.log('Script started');
+        try {
+            const THREE = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js');
+            console.log('Three.js loaded successfully:', THREE);
+            document.querySelector('.status').textContent = 'Three.js loaded! Images above should be visible.';
+        } catch (error) {
+            console.error('Three.js failed to load:', error);
+            document.querySelector('.status').textContent = 'ERROR: ' + error.message;
+        }
+    </script>
+</body>
+</html>
