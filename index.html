@@ -43,7 +43,7 @@
     </style>
 </head>
 <body>
-    <div id="instructions">Move mouse to look around • Scroll to zoom</div>
+    <div id="instructions"></div>
 
     <script type="importmap">
         {
@@ -122,7 +122,14 @@
             camera.lookAt(0, 0, 0);
         });
 
-        // Mouse tracking - orbit around figure with scroll to zoom
+        // Detect if touch device and set instructions
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        const instructionsEl = document.getElementById('instructions');
+        instructionsEl.textContent = isTouchDevice
+            ? 'Touch and drag to look around • Pinch to zoom'
+            : 'Move mouse to look around • Scroll to zoom';
+
+        // Mouse/touch tracking - orbit around figure with scroll/pinch to zoom
         let mouseX = 0.5;
         let mouseY = 0.5;
         let targetDistance = 15; // Start far away
@@ -137,9 +144,26 @@
 
             // Hide instructions after first interaction
             if (hasInteracted) {
-                document.getElementById('instructions').classList.add('hidden');
+                instructionsEl.classList.add('hidden');
             }
         });
+
+        // Touch move support
+        document.addEventListener('touchmove', (event) => {
+            hasInteracted = true;
+
+            if (event.touches.length === 1) {
+                // Single touch - look around
+                const touch = event.touches[0];
+                mouseX = touch.clientX / window.innerWidth;
+                mouseY = touch.clientY / window.innerHeight;
+            }
+
+            // Hide instructions after first interaction
+            if (hasInteracted) {
+                instructionsEl.classList.add('hidden');
+            }
+        }, { passive: true });
 
         // Scroll wheel zoom
         document.addEventListener('wheel', (event) => {
@@ -155,9 +179,53 @@
 
             // Hide instructions
             if (hasInteracted) {
-                document.getElementById('instructions').classList.add('hidden');
+                instructionsEl.classList.add('hidden');
             }
         }, { passive: false });
+
+        // Pinch-to-zoom support for mobile
+        let lastTouchDistance = null;
+
+        document.addEventListener('touchstart', (event) => {
+            if (event.touches.length === 2) {
+                // Record initial distance between two touches
+                const dx = event.touches[0].clientX - event.touches[1].clientX;
+                const dy = event.touches[0].clientY - event.touches[1].clientY;
+                lastTouchDistance = Math.sqrt(dx * dx + dy * dy);
+            }
+        }, { passive: true });
+
+        document.addEventListener('touchmove', (event) => {
+            if (event.touches.length === 2) {
+                hasInteracted = true;
+
+                // Calculate current distance between two touches
+                const dx = event.touches[0].clientX - event.touches[1].clientX;
+                const dy = event.touches[0].clientY - event.touches[1].clientY;
+                const currentDistance = Math.sqrt(dx * dx + dy * dy);
+
+                if (lastTouchDistance) {
+                    // Pinch gesture - adjust zoom
+                    const delta = lastTouchDistance - currentDistance;
+                    const zoomSpeed = 0.05;
+                    targetDistance += delta * zoomSpeed;
+
+                    // Clamp distance between 1 and 20
+                    targetDistance = Math.max(1, Math.min(20, targetDistance));
+                }
+
+                lastTouchDistance = currentDistance;
+
+                // Hide instructions
+                if (hasInteracted) {
+                    instructionsEl.classList.add('hidden');
+                }
+            }
+        }, { passive: true });
+
+        document.addEventListener('touchend', () => {
+            lastTouchDistance = null;
+        }, { passive: true });
 
         // Camera orbit parameters
         let currentDistance = 15;
