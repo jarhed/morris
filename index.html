@@ -408,15 +408,27 @@
             animate();
         });
 
-        // Click to return to static view
-        renderer.domElement.addEventListener('click', () => {
+        // Function to return to static view
+        function exit3DView() {
             const staticView = document.getElementById('static-view');
-            staticView.classList.remove('hidden');
+            if (staticView.classList.contains('hidden')) {
+                staticView.classList.remove('hidden');
 
-            // Reset instructions
-            const instructions = document.getElementById('instructions');
-            instructions.classList.remove('hidden');
-            hasInteracted = false;
+                // Reset instructions
+                const instructions = document.getElementById('instructions');
+                instructions.classList.remove('hidden');
+                hasInteracted = false;
+            }
+        }
+
+        // Click to return to static view
+        renderer.domElement.addEventListener('click', exit3DView);
+
+        // Escape key to return to static view
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                exit3DView();
+            }
         });
 
         // Handle window resize and orientation change
