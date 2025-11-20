@@ -1,19 +1,31 @@
 import torch
-from transformers import pipeline
+from transformers import AutoImageProcessor, AutoModelForDepthEstimation
 from PIL import Image
-import os
+import numpy as np
 
-# Initialize the depth estimation pipeline
-depth_estimator = pipeline(task="depth-estimation", model="Intel/dpt-large")
+model_name = "depth-anything/Depth-Anything-V2-Large-hf"
+image_processor = AutoImageProcessor.from_pretrained(model_name)
+model = AutoModelForDepthEstimation.from_pretrained(model_name)
 
-# Load the image
 image_path = "image_expanded.png"
 image = Image.open(image_path)
 
-# Estimate depth
-result = depth_estimator(image)
-depth_map = result["depth"]
+inputs = image_processor(images=image, return_tensors="pt")
 
-# Save the depth map
+with torch.no_grad():
+    outputs = model(**inputs)
+    predicted_depth = outputs.predicted_depth
+
+prediction = torch.nn.functional.interpolate(
+    predicted_depth.unsqueeze(1),
+    size=image.size[::-1],
+    mode="bicubic",
+    align_corners=False,
+)
+
+depth_array = prediction.squeeze().cpu().numpy()
+depth_array = (depth_array - depth_array.min()) / (depth_array.max() - depth_array.min())
+depth_map = Image.fromarray((depth_array * 255).astype(np.uint8))
+
 depth_map.save("depth_huggingface.png")
 print("Depth map saved to depth_huggingface.png")
