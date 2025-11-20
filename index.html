@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
@@ -44,7 +46,7 @@
             opacity: 1;
             transition: opacity 1s;
             pointer-events: none;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
             padding: 0 20px;
             max-width: 90%;
             line-height: 1.4;
@@ -59,10 +61,64 @@
         #instructions.hidden {
             opacity: 0;
         }
+
+        #static-view {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            transition: opacity 1.5s ease-out;
+            cursor: pointer;
+        }
+
+        #static-view img {
+            max-width: 90%;
+            max-height: 80vh;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transition: transform 0.5s ease;
+        }
+
+        #static-view:hover img {
+            transform: scale(1.02);
+        }
+
+        #static-view p {
+            color: rgba(255, 255, 255, 0.6);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            margin-top: 20px;
+            font-size: 14px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            opacity: 0;
+            animation: fadeIn 1s ease 1s forwards;
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+
+        #static-view.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
     </style>
 </head>
+
 <body>
-    <div id="instructions"></div>
+    <div id="static-view">
+        <img src="image.jpeg" alt="Journey Into the Image">
+        <p id="enter-text">Loading...</p>
+    </div>
+    <div id="instructions" class="hidden"></div>
 
     <script type="importmap">
         {
@@ -92,7 +148,7 @@
         });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Optimize for mobile
-        document.body.appendChild(renderer.domElement);
+        // document.body.appendChild(renderer.domElement); // Deferred until start
 
         // Add lighting for displacement mapping
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -143,6 +199,13 @@
             camera.position.z = 15;
             camera.position.y = 0;
             camera.lookAt(0, 0, 0);
+
+            // Mark as loaded and enable interaction
+            isLoaded = true;
+            const enterText = document.getElementById('enter-text');
+            enterText.textContent = 'Click to Enter';
+            enterText.style.opacity = '1';
+            enterText.style.cursor = 'pointer';
         });
 
         // Detect if touch device and set instructions
@@ -155,7 +218,7 @@
         // Mouse/touch tracking - orbit around figure with scroll/pinch to zoom
         let mouseX = 0.5;
         let mouseY = 0.5;
-        let targetDistance = 15; // Start far away
+        let targetDistance = 7; // Start far away
         let hasInteracted = false;
 
         document.addEventListener('mousemove', (event) => {
@@ -254,7 +317,7 @@
 
         // Camera orbit parameters
         let currentDistance = 15;
-        let currentTheta = 0;
+        let currentTheta = Math.PI / 2; // Start at PI/2 (Front view)
         let currentPhi = Math.PI / 2;
 
         // Center point to orbit around (the figure's position)
@@ -270,7 +333,8 @@
 
                 // Orbital angles based on mouse position
                 // Mouse X controls horizontal rotation (theta): -PI to +PI
-                const targetTheta = (mouseX - 0.5) * Math.PI * 2;
+                // Offset by PI/2 so that center (0.5) maps to PI/2 (Front view, Z-axis)
+                const targetTheta = (mouseX - 0.5) * Math.PI * 2 + Math.PI / 2;
                 currentTheta += (targetTheta - currentTheta) * 0.08;
 
                 // Mouse Y controls vertical angle (phi): PI/4 to 3*PI/4
@@ -295,7 +359,35 @@
             renderer.render(scene, camera);
         }
 
-        animate();
+        // animate(); // Deferred until start
+
+        // Start experience handler
+        const staticView = document.getElementById('static-view');
+        let isLoaded = false;
+
+        staticView.addEventListener('click', () => {
+            if (!isLoaded) return;
+
+            staticView.classList.add('hidden');
+            document.body.appendChild(renderer.domElement);
+
+            // Show instructions briefly
+            const instructions = document.getElementById('instructions');
+            instructions.classList.remove('hidden');
+
+            animate();
+        });
+
+        // Click to return to static view
+        renderer.domElement.addEventListener('click', () => {
+            const staticView = document.getElementById('static-view');
+            staticView.classList.remove('hidden');
+
+            // Reset instructions
+            const instructions = document.getElementById('instructions');
+            instructions.classList.remove('hidden');
+            hasInteracted = false;
+        });
 
         // Handle window resize and orientation change
         function handleResize() {
@@ -309,4 +401,5 @@
         window.addEventListener('orientationchange', handleResize);
     </script>
 </body>
+
 </html>
