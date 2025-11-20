@@ -188,10 +188,10 @@
         let imageAspect;
 
         // Load both color and depth textures
-        const colorTexture = textureLoader.load('image.jpeg');
-        const depthTexture = textureLoader.load('depth.png');
+        const colorTexture = textureLoader.load('image_expanded.png');
+        const depthTexture = textureLoader.load('depth_huggingface.png');
 
-        textureLoader.load('image.jpeg', (texture) => {
+        textureLoader.load('image_expanded.png', (texture) => {
             // Calculate aspect ratio to maintain image proportions
             imageAspect = texture.image.width / texture.image.height;
 
